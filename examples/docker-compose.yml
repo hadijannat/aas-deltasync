@@ -89,42 +89,49 @@ services:
   # ============================================================================
   # AAS-ΔSync Agents
   # ============================================================================
-  # Note: Use locally built images or comment out until images are published
-  # agent-a:
-  #   image: ghcr.io/aeroshariati/aas-deltasync-agent:latest
-  #   container_name: agent-a
-  #   environment:
-  #     - DELTASYNC_AGENT_ID=00000000-0000-0000-0000-00000000000a
-  #     - DELTASYNC_ADAPTER_TYPE=basyx
-  #     - DELTASYNC_SM_REPO_URL=http://basyx-sm-repo-a:8082
-  #     - DELTASYNC_MQTT_BROKER=tcp://mosquitto:1883
-  #     - DELTASYNC_TENANT=demo
-  #     - DELTASYNC_DB_PATH=/data/agent-a.db
-  #   volumes:
-  #     - agent-a-data:/data
-  #   networks:
-  #     - deltasync-net
-  #   depends_on:
-  #     - basyx-sm-repo-a
-  #     - mosquitto
+  agent-a:
+    build:
+      context: ..
+      dockerfile: ../Dockerfile
+    container_name: agent-a
+    environment:
+      - DELTASYNC_AGENT_ID=00000000-0000-0000-0000-00000000000a
+      - DELTASYNC_ADAPTER_TYPE=basyx
+      - DELTASYNC_SM_REPO_URL=http://basyx-sm-repo-a:8082
+      - DELTASYNC_AAS_REPO_URL=http://basyx-aas-repo-a:8081
+      - DELTASYNC_MQTT_BROKER=tcp://mosquitto:1883
+      - DELTASYNC_TENANT=demo
+      - DELTASYNC_DB_PATH=/data/agent-a.db
+      - DELTASYNC_SUBSCRIPTIONS='[{"aas_id":"urn:example:aas:asset1","submodel_id":"urn:example:sm:demo"}]'
+    volumes:
+      - agent-a-data:/data
+    networks:
+      - deltasync-net
+    depends_on:
+      - basyx-sm-repo-a
+      - mosquitto
 
-  # agent-b:
-  #   image: ghcr.io/aeroshariati/aas-deltasync-agent:latest
-  #   container_name: agent-b
-  #   environment:
-  #     - DELTASYNC_AGENT_ID=00000000-0000-0000-0000-00000000000b
-  #     - DELTASYNC_ADAPTER_TYPE=basyx
-  #     - DELTASYNC_SM_REPO_URL=http://basyx-sm-repo-b:8092
-  #     - DELTASYNC_MQTT_BROKER=tcp://mosquitto:1883
-  #     - DELTASYNC_TENANT=demo
-  #     - DELTASYNC_DB_PATH=/data/agent-b.db
-  #   volumes:
-  #     - agent-b-data:/data
-  #   networks:
-  #     - deltasync-net
-  #   depends_on:
-  #     - basyx-sm-repo-b
-  #     - mosquitto
+  agent-b:
+    build:
+      context: ..
+      dockerfile: ../Dockerfile
+    container_name: agent-b
+    environment:
+      - DELTASYNC_AGENT_ID=00000000-0000-0000-0000-00000000000b
+      - DELTASYNC_ADAPTER_TYPE=basyx
+      - DELTASYNC_SM_REPO_URL=http://basyx-sm-repo-b:8092
+      - DELTASYNC_AAS_REPO_URL=http://basyx-aas-repo-b:8091
+      - DELTASYNC_MQTT_BROKER=tcp://mosquitto:1883
+      - DELTASYNC_TENANT=demo
+      - DELTASYNC_DB_PATH=/data/agent-b.db
+      - DELTASYNC_SUBSCRIPTIONS='[{"aas_id":"urn:example:aas:asset1","submodel_id":"urn:example:sm:demo"}]'
+    volumes:
+      - agent-b-data:/data
+    networks:
+      - deltasync-net
+    depends_on:
+      - basyx-sm-repo-b
+      - mosquitto
 
 networks:
   deltasync-net:

@@ -231,7 +231,7 @@ Expected running components:
 * MQTT broker (Mosquitto or equivalent)
 * Site A AAS server (BaSyx)
 * Site B AAS server (BaSyx)
-* Agent A / Agent B (commented out by default in `examples/docker-compose.yml`)
+* Agent A / Agent B (built from `Dockerfile` in `examples/docker-compose.yml`)
 
 ### 5.2 Verify BaSyx MQTT event emission directly (independent of the agent)
 
@@ -262,7 +262,7 @@ docker logs -f agent-a
 docker logs -f agent-b
 ```
 
-If you run the agent locally instead (agents are commented out in the compose file), use:
+If you run the agent locally instead of the compose services, use:
 
 ```bash
 RUST_LOG=debug cargo run -p aas-deltasync-agent
