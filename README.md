@@ -116,7 +116,7 @@ flowchart TB
 
 ```bash
 # Clone and enter the repository
-git clone https://github.com/aeroshariati/aas-deltasync
+git clone https://github.com/hadijannat/aas-deltasync
 cd aas-deltasync/examples
 
 # Start the demo (2 sites + MQTT broker)
@@ -223,7 +223,7 @@ persistence:
   title = {AAS-ΔSync: Offline-First Multi-Master Synchronization for Asset Administration Shell Digital Twins},
   author = {Jannatabadi, Hadi},
   year = {2025},
-  url = {https://github.com/aeroshariati/aas-deltasync}
+  url = {https://github.com/hadijannat/aas-deltasync}
 }
 ```
 

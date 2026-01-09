@@ -14,7 +14,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/aeroshariati/aas-deltasync"
+repository = "https://github.com/hadijannat/aas-deltasync"
 rust-version = "1.75"
 
 [workspace.dependencies]
@@ -23,6 +23,7 @@ tokio = { version = "1.35", features = ["full"] }
 
 # HTTP client
 reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+url = "2.5"
 
 # MQTT client
 rumqttc = "0.24"

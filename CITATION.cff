@@ -3,12 +3,12 @@ title: "AAS-ΔSync: Offline-First Multi-Master Synchronization for Asset Adminis
 message: "If you use this software, please cite it as below."
 type: software
 authors:
-  - family-names: Shariati
-    given-names: Aero
-repository-code: "https://github.com/aeroshariati/aas-deltasync"
+  - family-names: Jannatabadi
+    given-names: Hadi
+repository-code: "https://github.com/hadijannat/aas-deltasync"
 license: Apache-2.0
 version: 0.1.0
-date-released: "2025-01-08"
+date-released: "2026-01-09"
 keywords:
   - asset-administration-shell
   - digital-twin

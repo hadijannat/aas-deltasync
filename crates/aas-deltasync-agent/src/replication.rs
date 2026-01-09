@@ -3,6 +3,7 @@
 use aas_deltasync_proto::{DocDelta, TopicScheme};
 use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS};
 use std::time::Duration;
+use url::Url;
 
 /// Replication manager for delta dissemination.
 pub struct ReplicationManager {
@@ -16,13 +17,12 @@ impl ReplicationManager {
     /// # Errors
     ///
     /// Returns error if MQTT connection fails.
-    #[allow(clippy::unnecessary_wraps)]
     pub fn new(
         mqtt_broker: &str,
         client_id: &str,
         topic_scheme: TopicScheme,
     ) -> Result<(Self, EventLoop), ReplicationError> {
-        let (host, port) = parse_mqtt_url(mqtt_broker);
+        let (host, port) = parse_mqtt_url(mqtt_broker)?;
 
         let mut mqtt_options = MqttOptions::new(client_id, host, port);
         mqtt_options.set_keep_alive(Duration::from_secs(30));
@@ -84,18 +84,46 @@ impl ReplicationManager {
 }
 
 /// Parse MQTT URL into host and port.
-fn parse_mqtt_url(url: &str) -> (String, u16) {
-    let url = url
-        .strip_prefix("tcp://")
-        .or_else(|| url.strip_prefix("mqtt://"))
-        .unwrap_or(url);
+fn parse_mqtt_url(input: &str) -> Result<(String, u16), ReplicationError> {
+    if input.contains("://") {
+        let url = Url::parse(input)
+            .map_err(|e| ReplicationError::InvalidBrokerUrl(format!("{input}: {e}")))?;
 
-    let parts: Vec<&str> = url.split(':').collect();
+        match url.scheme() {
+            "tcp" | "mqtt" => {}
+            scheme => {
+                return Err(ReplicationError::InvalidBrokerUrl(format!(
+                    "{input}: unsupported scheme '{scheme}'"
+                )));
+            }
+        }
 
-    let host = parts.first().copied().unwrap_or("localhost").to_string();
-    let port = parts.get(1).and_then(|p| p.parse().ok()).unwrap_or(1883);
+        let host = url
+            .host_str()
+            .ok_or_else(|| ReplicationError::InvalidBrokerUrl(format!("{input}: missing host")))?;
+        let port = url.port().unwrap_or(1883);
 
-    (host, port)
+        return Ok((host.to_string(), port));
+    }
+
+    let mut parts = input.split(':');
+    let host = parts
+        .next()
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| ReplicationError::InvalidBrokerUrl(format!("{input}: missing host")))?;
+    let port = match parts.next() {
+        None => 1883,
+        Some(port) => port.parse().map_err(|_| {
+            ReplicationError::InvalidBrokerUrl(format!("{input}: invalid port '{port}'"))
+        })?,
+    };
+    if parts.next().is_some() {
+        return Err(ReplicationError::InvalidBrokerUrl(format!(
+            "{input}: too many ':' separators"
+        )));
+    }
+
+    Ok((host.to_string(), port))
 }
 
 /// Errors for replication operations.
@@ -104,6 +132,9 @@ pub enum ReplicationError {
     /// Subscription failed
     #[error("subscription error: {0}")]
     Subscribe(String),
+    /// Invalid MQTT broker URL
+    #[error("invalid MQTT broker URL: {0}")]
+    InvalidBrokerUrl(String),
     /// Publish failed
     #[error("publish error: {0}")]
     #[allow(dead_code)]

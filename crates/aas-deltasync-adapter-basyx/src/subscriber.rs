@@ -4,6 +4,7 @@ use crate::events::{BasyxEvent, EventParseError};
 use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
 use std::time::Duration;
 use tokio::sync::mpsc;
+use url::Url;
 
 /// Configuration for the `BaSyx` subscriber.
 #[derive(Debug, Clone)]
@@ -44,7 +45,7 @@ impl BasyxSubscriber {
     /// Returns error if MQTT connection fails.
     pub fn new(config: BasyxSubscriberConfig) -> Result<Self, SubscriberError> {
         // Parse broker URL
-        let (host, port) = parse_mqtt_url(&config.mqtt_broker);
+        let (host, port) = parse_mqtt_url(&config.mqtt_broker)?;
 
         let mut mqtt_options = MqttOptions::new(&config.client_id, host, port);
         mqtt_options.set_keep_alive(config.keep_alive);
@@ -149,18 +150,46 @@ impl BasyxSubscriber {
 }
 
 /// Parse MQTT URL into host and port.
-fn parse_mqtt_url(url: &str) -> (String, u16) {
-    let url = url
-        .strip_prefix("tcp://")
-        .or_else(|| url.strip_prefix("mqtt://"))
-        .unwrap_or(url);
+fn parse_mqtt_url(input: &str) -> Result<(String, u16), SubscriberError> {
+    if input.contains("://") {
+        let url =
+            Url::parse(input).map_err(|e| SubscriberError::InvalidUrl(format!("{input}: {e}")))?;
 
-    let parts: Vec<&str> = url.split(':').collect();
+        match url.scheme() {
+            "tcp" | "mqtt" => {}
+            scheme => {
+                return Err(SubscriberError::InvalidUrl(format!(
+                    "{input}: unsupported scheme '{scheme}'"
+                )));
+            }
+        }
 
-    let host = parts.first().copied().unwrap_or("localhost").to_string();
-    let port = parts.get(1).and_then(|p| p.parse().ok()).unwrap_or(1883);
+        let host = url
+            .host_str()
+            .ok_or_else(|| SubscriberError::InvalidUrl(format!("{input}: missing host")))?;
+        let port = url.port().unwrap_or(1883);
 
-    (host, port)
+        return Ok((host.to_string(), port));
+    }
+
+    let mut parts = input.split(':');
+    let host = parts
+        .next()
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| SubscriberError::InvalidUrl(format!("{input}: missing host")))?;
+    let port = match parts.next() {
+        None => 1883,
+        Some(port) => port
+            .parse()
+            .map_err(|_| SubscriberError::InvalidUrl(format!("{input}: invalid port '{port}'")))?,
+    };
+    if parts.next().is_some() {
+        return Err(SubscriberError::InvalidUrl(format!(
+            "{input}: too many ':' separators"
+        )));
+    }
+
+    Ok((host.to_string(), port))
 }
 
 /// Errors that can occur with the subscriber.
@@ -183,21 +212,21 @@ mod tests {
 
     #[test]
     fn parse_mqtt_url_tcp() {
-        let (host, port) = parse_mqtt_url("tcp://localhost:1883");
+        let (host, port) = parse_mqtt_url("tcp://localhost:1883").unwrap();
         assert_eq!(host, "localhost");
         assert_eq!(port, 1883);
     }
 
     #[test]
     fn parse_mqtt_url_default_port() {
-        let (host, port) = parse_mqtt_url("tcp://broker.example.com");
+        let (host, port) = parse_mqtt_url("tcp://broker.example.com").unwrap();
         assert_eq!(host, "broker.example.com");
         assert_eq!(port, 1883);
     }
 
     #[test]
     fn parse_mqtt_url_no_scheme() {
-        let (host, port) = parse_mqtt_url("localhost:1883");
+        let (host, port) = parse_mqtt_url("localhost:1883").unwrap();
         assert_eq!(host, "localhost");
         assert_eq!(port, 1883);
     }
