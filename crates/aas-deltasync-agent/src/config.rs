@@ -47,6 +47,13 @@ pub struct AdapterConfig {
 
     /// Poll interval (for FA³ST)
     pub poll_interval: Duration,
+
+    /// CA certificate path for AAS HTTPS (PEM, for self-signed certs)
+    pub aas_ca_path: Option<PathBuf>,
+    /// Client certificate path for AAS mTLS (PEM)
+    pub aas_client_cert_path: Option<PathBuf>,
+    /// Client key path for AAS mTLS (PEM)
+    pub aas_client_key_path: Option<PathBuf>,
 }
 
 /// Replication configuration.
@@ -99,6 +106,9 @@ impl Default for AgentConfig {
                 mqtt_ca_path: None,
                 bearer_token: None,
                 poll_interval: Duration::from_secs(5),
+                aas_ca_path: None,
+                aas_client_cert_path: None,
+                aas_client_key_path: None,
             },
             replication: ReplicationConfig {
                 mqtt_broker: "tcp://localhost:1883".to_string(),
@@ -128,6 +138,9 @@ impl AgentConfig {
     /// - `DELTASYNC_MQTT_CA_PATH`: MQTT CA certificate path (PEM)
     /// - `DELTASYNC_TENANT`: Tenant identifier
     /// - `DELTASYNC_DB_PATH`: `SQLite` database path
+    /// - `DELTASYNC_AAS_CA_PATH`: AAS HTTPS CA certificate path (PEM)
+    /// - `DELTASYNC_AAS_CLIENT_CERT`: AAS HTTPS client certificate path (PEM, for mTLS)
+    /// - `DELTASYNC_AAS_CLIENT_KEY`: AAS HTTPS client key path (PEM, for mTLS)
     ///
     /// # Errors
     ///
@@ -172,6 +185,19 @@ impl AgentConfig {
 
         if let Ok(token) = std::env::var("DELTASYNC_BEARER_TOKEN") {
             config.adapter.bearer_token = Some(token);
+        }
+
+        // AAS HTTPS TLS configuration
+        if let Ok(ca_path) = std::env::var("DELTASYNC_AAS_CA_PATH") {
+            config.adapter.aas_ca_path = Some(PathBuf::from(ca_path));
+        }
+
+        if let Ok(cert_path) = std::env::var("DELTASYNC_AAS_CLIENT_CERT") {
+            config.adapter.aas_client_cert_path = Some(PathBuf::from(cert_path));
+        }
+
+        if let Ok(key_path) = std::env::var("DELTASYNC_AAS_CLIENT_KEY") {
+            config.adapter.aas_client_key_path = Some(PathBuf::from(key_path));
         }
 
         // Parse subscriptions from JSON env var

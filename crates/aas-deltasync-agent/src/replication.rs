@@ -1,6 +1,6 @@
 //! Replication layer for delta dissemination.
 
-use aas_deltasync_proto::{DocDelta, TopicScheme};
+use aas_deltasync_proto::{AntiEntropyRequest, AntiEntropyResponse, DocDelta, TopicScheme};
 use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS, Transport};
 use std::fs;
 use std::path::Path;
@@ -65,7 +65,6 @@ impl ReplicationManager {
     /// # Errors
     ///
     /// Returns error if publish fails.
-    #[allow(dead_code)]
     pub async fn publish_delta(
         &self,
         doc_hash: &str,
@@ -77,6 +76,67 @@ impl ReplicationManager {
             .map_err(|e| ReplicationError::Serialize(e.to_string()))?;
 
         tracing::debug!(topic, payload_len = payload.len(), "Publishing delta");
+
+        self.client
+            .publish(&topic, QoS::AtLeastOnce, false, payload)
+            .await
+            .map_err(|e| ReplicationError::Publish(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Publish an anti-entropy response.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if publish fails.
+    pub async fn publish_ae_response(
+        &self,
+        doc_hash: &str,
+        response: &AntiEntropyResponse,
+    ) -> Result<(), ReplicationError> {
+        let topic = self.topic_scheme.ae_response(doc_hash);
+        let payload = response
+            .to_cbor()
+            .map_err(|e| ReplicationError::Serialize(e.to_string()))?;
+
+        tracing::debug!(
+            topic,
+            payload_len = payload.len(),
+            deltas_count = response.deltas.len(),
+            "Publishing anti-entropy response"
+        );
+
+        self.client
+            .publish(&topic, QoS::AtLeastOnce, false, payload)
+            .await
+            .map_err(|e| ReplicationError::Publish(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Publish an anti-entropy request.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if publish fails.
+    #[allow(dead_code)]
+    pub async fn publish_ae_request(
+        &self,
+        doc_hash: &str,
+        request: &AntiEntropyRequest,
+    ) -> Result<(), ReplicationError> {
+        let topic = self.topic_scheme.ae_request(doc_hash);
+        let payload = request
+            .to_cbor()
+            .map_err(|e| ReplicationError::Serialize(e.to_string()))?;
+
+        tracing::debug!(
+            topic,
+            payload_len = payload.len(),
+            doc_id = %request.doc_id,
+            "Publishing anti-entropy request"
+        );
 
         self.client
             .publish(&topic, QoS::AtLeastOnce, false, payload)
@@ -191,13 +251,11 @@ pub enum ReplicationError {
     InvalidBrokerUrl(String),
     /// Publish failed
     #[error("publish error: {0}")]
-    #[allow(dead_code)]
     Publish(String),
     /// TLS configuration error
     #[error("TLS configuration error: {0}")]
     Tls(String),
     /// Serialization failed
     #[error("serialize error: {0}")]
-    #[allow(dead_code)]
     Serialize(String),
 }

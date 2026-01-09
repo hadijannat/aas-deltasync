@@ -22,6 +22,7 @@ Thumbs.db
 
 # Local agent instructions
 AGENTS.md
+CLAUDE.md
 
 # Artifacts
 *.aasx

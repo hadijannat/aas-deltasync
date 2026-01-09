@@ -62,6 +62,9 @@ impl FaaastPoller {
             base_url: config.base_url.clone(),
             timeout: config.poll_interval * 2,
             bearer_token: config.bearer_token.clone(),
+            ca_cert_path: config.ca_cert_path.clone(),
+            client_cert_path: config.client_cert_path.clone(),
+            client_key_path: config.client_key_path.clone(),
         };
 
         let client =

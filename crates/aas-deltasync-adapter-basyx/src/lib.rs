@@ -18,4 +18,4 @@ pub mod events;
 pub mod subscriber;
 
 pub use events::{BasyxEvent, ElementEvent, EventType};
-pub use subscriber::BasyxSubscriber;
+pub use subscriber::{BasyxSubscriber, BasyxSubscriberConfig};
