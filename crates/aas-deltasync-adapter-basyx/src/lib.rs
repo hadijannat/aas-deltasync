@@ -1,10 +1,10 @@
-//! # BaSyx Adapter
+//! # `BaSyx` Adapter
 //!
-//! MQTT event ingestion from Eclipse BaSyx AAS and Submodel Repositories.
+//! MQTT event ingestion from Eclipse `BaSyx` AAS and Submodel Repositories.
 //!
-//! ## BaSyx MQTT Topics
+//! ## `BaSyx` MQTT Topics
 //!
-//! BaSyx publishes events on topics:
+//! `BaSyx` publishes events on topics:
 //! - `sm-repository/{repoId}/submodels/{submodelIdBase64}/submodelElements/{idShortPath}/updated`
 //! - `.../created`, `.../deleted`
 //! - `.../submodelElements/patched`

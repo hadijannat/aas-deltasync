@@ -7,7 +7,7 @@
 //! - **Identifiable IDs**: base64url-encoded WITHOUT padding
 //! - **idShortPath**: URL-encoded (preserving `[]` for list indices)
 //!
-//! These rules are non-negotiable for interoperability with BaSyx, FA³ST, and other
+//! These rules are non-negotiable for interoperability with `BaSyx`, FA³ST, and other
 //! AAS implementations.
 
 #![warn(missing_docs)]

@@ -1,9 +1,9 @@
-//! BaSyx MQTT event types.
+//! `BaSyx` MQTT event types.
 
 use aas_deltasync_adapter_aas::decode_id_base64url;
 use serde::{Deserialize, Serialize};
 
-/// Type of BaSyx event.
+/// Type of `BaSyx` event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EventType {
@@ -31,7 +31,7 @@ impl EventType {
     }
 }
 
-/// A parsed BaSyx MQTT event.
+/// A parsed `BaSyx` MQTT event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BasyxEvent {
     /// Repository ID
@@ -56,7 +56,7 @@ pub struct ElementEvent {
 }
 
 impl BasyxEvent {
-    /// Parse a BaSyx event from an MQTT topic and payload.
+    /// Parse a `BaSyx` event from an MQTT topic and payload.
     ///
     /// # Topic Format
     ///
@@ -100,7 +100,7 @@ impl BasyxEvent {
         // Determine event type and element path
         let event_type_str = parts.last().unwrap_or(&"");
         let event_type = EventType::from_topic_suffix(event_type_str)
-            .ok_or_else(|| EventParseError::UnknownEventType(event_type_str.to_string()))?;
+            .ok_or_else(|| EventParseError::UnknownEventType((*event_type_str).to_string()))?;
 
         // Check if this is an element-level event
         let element =
@@ -143,7 +143,7 @@ impl BasyxEvent {
     }
 }
 
-/// Errors that can occur parsing BaSyx events.
+/// Errors that can occur parsing `BaSyx` events.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum EventParseError {
     /// Topic format is invalid
@@ -171,8 +171,7 @@ mod tests {
         let encoded_sm_id = encode_id_base64url(submodel_id);
 
         let topic = format!(
-            "sm-repository/repo1/submodels/{}/submodelElements/Temperature/updated",
-            encoded_sm_id
+            "sm-repository/repo1/submodels/{encoded_sm_id}/submodelElements/Temperature/updated"
         );
 
         let payload = br#"{"value": 25.5}"#;
@@ -194,8 +193,7 @@ mod tests {
         let encoded_sm_id = encode_id_base64url(submodel_id);
 
         let topic = format!(
-            "sm-repository/repo1/submodels/{}/submodelElements/OldProperty/deleted",
-            encoded_sm_id
+            "sm-repository/repo1/submodels/{encoded_sm_id}/submodelElements/OldProperty/deleted"
         );
 
         let event = BasyxEvent::parse(&topic, b"").unwrap();
@@ -212,8 +210,7 @@ mod tests {
         let encoded_sm_id = encode_id_base64url(submodel_id);
 
         let topic = format!(
-            "sm-repository/repo2/submodels/{}/submodelElements/Collection/SubProperty/updated",
-            encoded_sm_id
+            "sm-repository/repo2/submodels/{encoded_sm_id}/submodelElements/Collection/SubProperty/updated"
         );
 
         let event = BasyxEvent::parse(&topic, b"{}").unwrap();

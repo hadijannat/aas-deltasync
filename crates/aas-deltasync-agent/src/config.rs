@@ -37,7 +37,7 @@ pub struct AdapterConfig {
     /// Submodel repository URL
     pub sm_repo_url: String,
 
-    /// MQTT broker URL (for BaSyx)
+    /// MQTT broker URL (for `BaSyx`)
     pub mqtt_broker: Option<String>,
 
     /// Bearer token for authentication
@@ -66,7 +66,7 @@ pub struct PersistenceConfig {
     /// Persistence type: "sqlite" or "memory"
     pub store_type: String,
 
-    /// Database path (for SQLite)
+    /// Database path (for `SQLite`)
     pub db_path: PathBuf,
 
     /// Compaction interval
@@ -120,7 +120,7 @@ impl AgentConfig {
     /// - `DELTASYNC_SM_REPO_URL`: Submodel repository URL
     /// - `DELTASYNC_MQTT_BROKER`: MQTT broker URL
     /// - `DELTASYNC_TENANT`: Tenant identifier
-    /// - `DELTASYNC_DB_PATH`: SQLite database path
+    /// - `DELTASYNC_DB_PATH`: `SQLite` database path
     ///
     /// # Errors
     ///

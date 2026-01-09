@@ -75,6 +75,7 @@ impl FaaastPoller {
     }
 
     /// Start polling and return a channel of deltas.
+    #[must_use]
     pub fn start(
         mut self,
         submodel_ids: Vec<String>,
@@ -172,7 +173,7 @@ fn diff_values(
                     let child_path = if path.is_empty() {
                         key.clone()
                     } else {
-                        format!("{}.{}", path, key)
+                        format!("{path}.{key}")
                     };
                     delta.add_remove(child_path, clock.tick());
                 }
@@ -183,7 +184,7 @@ fn diff_values(
                 let child_path = if path.is_empty() {
                     key.clone()
                 } else {
-                    format!("{}.{}", path, key)
+                    format!("{path}.{key}")
                 };
 
                 if let Some(old_val) = old_obj.get(key) {
@@ -200,7 +201,7 @@ fn diff_values(
             // Note: This is simplified; production would use stable IDs
             let max_len = old_arr.len().max(new_arr.len());
             for i in 0..max_len {
-                let child_path = format!("{}[{}]", path, i);
+                let child_path = format!("{path}[{i}]");
                 match (old_arr.get(i), new_arr.get(i)) {
                     (Some(old_val), Some(new_val)) => {
                         diff_values(old_val, new_val, &child_path, delta, clock);
@@ -239,14 +240,14 @@ fn flatten_value(value: &Value, path: &str, delta: &mut Delta<String, Value>, cl
                 let child_path = if path.is_empty() {
                     key.clone()
                 } else {
-                    format!("{}.{}", path, key)
+                    format!("{path}.{key}")
                 };
                 flatten_value(val, &child_path, delta, clock);
             }
         }
         Value::Array(arr) => {
             for (i, val) in arr.iter().enumerate() {
-                let child_path = format!("{}[{}]", path, i);
+                let child_path = format!("{path}[{i}]");
                 flatten_value(val, &child_path, delta, clock);
             }
         }

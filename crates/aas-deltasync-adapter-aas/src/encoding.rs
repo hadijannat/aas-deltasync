@@ -8,7 +8,7 @@
 //! # References
 //!
 //! - IDTA 01002-3-1: Specification of the Asset Administration Shell Part 2
-//! - FAQ: https://github.com/admin-shell-io/questions-and-answers
+//! - FAQ: <https://github.com/admin-shell-io/questions-and-answers>
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
@@ -120,7 +120,7 @@ pub fn encode_idshort_path(path: &str) -> String {
 pub fn decode_idshort_path(encoded: &str) -> Result<String, EncodingError> {
     percent_decode_str(encoded)
         .decode_utf8()
-        .map(|s| s.into_owned())
+        .map(std::borrow::Cow::into_owned)
         .map_err(|e| EncodingError::Utf8Decode(e.to_string()))
 }
 
@@ -163,9 +163,7 @@ mod tests {
             let encoded = encode_id_base64url(id);
             assert!(
                 !encoded.contains('='),
-                "Encoded '{}' should not contain padding: {}",
-                id,
-                encoded
+                "Encoded '{id}' should not contain padding: {encoded}"
             );
         }
     }
@@ -215,8 +213,7 @@ mod tests {
         // Brackets should be preserved for list notation
         assert!(
             encoded.contains('[') && encoded.contains(']'),
-            "Brackets should be preserved: {}",
-            encoded
+            "Brackets should be preserved: {encoded}"
         );
     }
 

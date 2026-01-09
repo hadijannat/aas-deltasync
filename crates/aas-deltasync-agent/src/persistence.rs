@@ -1,15 +1,16 @@
-//! SQLite persistence layer.
+//! `SQLite` persistence layer.
 
 use rusqlite::{Connection, OptionalExtension, Result as SqliteResult};
 use std::path::Path;
 
-/// SQLite-backed persistence store.
+/// `SQLite`-backed persistence store.
 pub struct SqliteStore {
     conn: Connection,
 }
 
+#[allow(dead_code)]
 impl SqliteStore {
-    /// Open or create a SQLite database.
+    /// Open or create a `SQLite` database.
     ///
     /// # Errors
     ///
@@ -36,7 +37,7 @@ impl SqliteStore {
     /// Initialize database schema.
     fn init_schema(&self) -> SqliteResult<()> {
         self.conn.execute_batch(
-            r#"
+            r"
             -- State snapshots for each document
             CREATE TABLE IF NOT EXISTS doc_snapshots (
                 doc_id TEXT PRIMARY KEY,
@@ -68,7 +69,7 @@ impl SqliteStore {
                 updated_at INTEGER NOT NULL,
                 PRIMARY KEY (peer_id, doc_id)
             );
-            "#,
+            ",
         )?;
 
         Ok(())
@@ -92,12 +93,15 @@ impl SqliteStore {
             .unwrap()
             .as_secs();
 
+        let now_i64 = to_i64(now)?;
+        let hlc_ts_i64 = to_i64(hlc_ts)?;
+
         self.conn.execute(
-            r#"
+            r"
             INSERT OR REPLACE INTO delta_log (doc_id, delta_id, delta_bytes, actor_id, hlc_ts, created_at)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-            "#,
-            (doc_id, delta_id, delta_bytes, actor_id, hlc_ts as i64, now as i64),
+            ",
+            (doc_id, delta_id, delta_bytes, actor_id, hlc_ts_i64, now_i64),
         )?;
 
         Ok(())
@@ -110,15 +114,15 @@ impl SqliteStore {
     /// Returns error if query fails.
     pub fn get_deltas_after(&self, doc_id: &str, after_ts: u64) -> SqliteResult<Vec<Vec<u8>>> {
         let mut stmt = self.conn.prepare(
-            r#"
+            r"
             SELECT delta_bytes FROM delta_log
             WHERE doc_id = ?1 AND hlc_ts > ?2
             ORDER BY hlc_ts ASC
-            "#,
+            ",
         )?;
 
         let deltas = stmt
-            .query_map((doc_id, after_ts as i64), |row| row.get(0))?
+            .query_map((doc_id, to_i64(after_ts)?), |row| row.get(0))?
             .collect::<SqliteResult<Vec<Vec<u8>>>>()?;
 
         Ok(deltas)
@@ -140,12 +144,14 @@ impl SqliteStore {
             .unwrap()
             .as_secs();
 
+        let now_i64 = to_i64(now)?;
+
         self.conn.execute(
-            r#"
+            r"
             INSERT OR REPLACE INTO doc_snapshots (doc_id, snapshot_bytes, snapshot_clock, created_at)
             VALUES (?1, ?2, ?3, ?4)
-            "#,
-            (doc_id, snapshot_bytes, clock_bytes, now as i64),
+            ",
+            (doc_id, snapshot_bytes, clock_bytes, now_i64),
         )?;
 
         Ok(())
@@ -158,10 +164,10 @@ impl SqliteStore {
     /// Returns error if query fails.
     pub fn get_snapshot(&self, doc_id: &str) -> SqliteResult<Option<(Vec<u8>, Vec<u8>)>> {
         let mut stmt = self.conn.prepare(
-            r#"
+            r"
             SELECT snapshot_bytes, snapshot_clock FROM doc_snapshots
             WHERE doc_id = ?1
-            "#,
+            ",
         )?;
 
         let result = stmt
@@ -178,11 +184,11 @@ impl SqliteStore {
     /// Returns error if delete fails.
     pub fn compact_deltas_before(&self, doc_id: &str, before_ts: u64) -> SqliteResult<usize> {
         let deleted = self.conn.execute(
-            r#"
+            r"
             DELETE FROM delta_log
             WHERE doc_id = ?1 AND hlc_ts < ?2
-            "#,
-            (doc_id, before_ts as i64),
+            ",
+            (doc_id, to_i64(before_ts)?),
         )?;
 
         Ok(deleted)
@@ -205,16 +211,22 @@ impl SqliteStore {
             .unwrap()
             .as_secs();
 
+        let now_i64 = to_i64(now)?;
+
         self.conn.execute(
-            r#"
+            r"
             INSERT OR REPLACE INTO peer_progress (peer_id, doc_id, last_ack_delta_id, updated_at)
             VALUES (?1, ?2, ?3, ?4)
-            "#,
-            (peer_id, doc_id, last_delta_id, now as i64),
+            ",
+            (peer_id, doc_id, last_delta_id, now_i64),
         )?;
 
         Ok(())
     }
+}
+
+fn to_i64(value: u64) -> SqliteResult<i64> {
+    i64::try_from(value).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
 }
 
 #[cfg(test)]

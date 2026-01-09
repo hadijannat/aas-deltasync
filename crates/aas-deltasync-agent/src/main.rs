@@ -5,7 +5,7 @@
 //! ## Architecture
 //!
 //! The agent implements five concurrent loops:
-//! 1. **Ingress**: Receives events from adapters (BaSyx MQTT, FA³ST polling)
+//! 1. **Ingress**: Receives events from adapters (`BaSyx` MQTT, FA³ST polling)
 //! 2. **Mutation**: Converts events to CRDT deltas and applies locally
 //! 3. **Replication**: Publishes deltas to MQTT and handles anti-entropy
 //! 4. **Egress**: Pushes converged state back to AAS server (optional)

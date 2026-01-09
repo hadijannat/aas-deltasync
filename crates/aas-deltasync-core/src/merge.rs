@@ -69,7 +69,8 @@ impl ElementType {
             ElementType::Property
             | ElementType::ReferenceElement
             | ElementType::BasicEventElement
-            | ElementType::Capability => MergeStrategy::Lww,
+            | ElementType::Capability
+            | ElementType::Operation => MergeStrategy::Lww,
 
             // Range and MultiLanguageProperty have compound values
             ElementType::Range | ElementType::MultiLanguageProperty => MergeStrategy::PerFieldLww,
@@ -82,9 +83,6 @@ impl ElementType {
 
             // Binary content uses content-addressing
             ElementType::Blob | ElementType::File => MergeStrategy::ContentAddressed,
-
-            // Operations are structural definitions, use LWW
-            ElementType::Operation => MergeStrategy::Lww,
         }
     }
 }

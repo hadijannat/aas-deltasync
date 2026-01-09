@@ -54,7 +54,7 @@ impl AgentHello {
 /// A document delta for incremental replication.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocDelta {
-    /// Document identifier (serialized DocId)
+    /// Document identifier (serialized `DocId`)
     pub doc_id: String,
     /// Delta identifier (HLC timestamp bytes)
     pub delta_id: Vec<u8>,
@@ -76,7 +76,7 @@ impl DocDelta {
         }
     }
 
-    /// Get the timestamp from delta_id.
+    /// Get the timestamp from `delta_id`.
     ///
     /// # Errors
     ///
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn doc_delta_cbor_roundtrip() {
         let ts = Timestamp {
-            physical_ms: 1704067200000,
+            physical_ms: 1_704_067_200_000,
             logical: 42,
             actor_id: Uuid::new_v4(),
         };

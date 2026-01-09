@@ -9,20 +9,15 @@ use crate::hlc::Hlc;
 use serde::{Deserialize, Serialize};
 
 /// The type of view being replicated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum View {
     /// Full submodel (Normal serialization)
     Normal,
     /// Value-only view ($value modifier)
+    #[default]
     Value,
     /// Metadata-only view ($metadata modifier)
     Metadata,
-}
-
-impl Default for View {
-    fn default() -> Self {
-        Self::Value
-    }
 }
 
 impl std::fmt::Display for View {

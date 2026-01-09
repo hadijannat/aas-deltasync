@@ -16,12 +16,13 @@ impl ReplicationManager {
     /// # Errors
     ///
     /// Returns error if MQTT connection fails.
+    #[allow(clippy::unnecessary_wraps)]
     pub fn new(
         mqtt_broker: &str,
         client_id: &str,
         topic_scheme: TopicScheme,
     ) -> Result<(Self, EventLoop), ReplicationError> {
-        let (host, port) = parse_mqtt_url(mqtt_broker)?;
+        let (host, port) = parse_mqtt_url(mqtt_broker);
 
         let mut mqtt_options = MqttOptions::new(client_id, host, port);
         mqtt_options.set_keep_alive(Duration::from_secs(30));
@@ -83,7 +84,7 @@ impl ReplicationManager {
 }
 
 /// Parse MQTT URL into host and port.
-fn parse_mqtt_url(url: &str) -> Result<(String, u16), ReplicationError> {
+fn parse_mqtt_url(url: &str) -> (String, u16) {
     let url = url
         .strip_prefix("tcp://")
         .or_else(|| url.strip_prefix("mqtt://"))
@@ -91,10 +92,10 @@ fn parse_mqtt_url(url: &str) -> Result<(String, u16), ReplicationError> {
 
     let parts: Vec<&str> = url.split(':').collect();
 
-    let host = parts.first().unwrap_or(&"localhost").to_string();
+    let host = parts.first().copied().unwrap_or("localhost").to_string();
     let port = parts.get(1).and_then(|p| p.parse().ok()).unwrap_or(1883);
 
-    Ok((host, port))
+    (host, port)
 }
 
 /// Errors for replication operations.

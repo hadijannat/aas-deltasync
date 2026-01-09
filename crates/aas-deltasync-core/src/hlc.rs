@@ -60,9 +60,24 @@ impl Timestamp {
             });
         }
 
-        let physical_ms = u64::from_be_bytes(bytes[0..8].try_into().unwrap());
-        let logical = u32::from_be_bytes(bytes[8..12].try_into().unwrap());
-        let actor_id = Uuid::from_bytes(bytes[12..28].try_into().unwrap());
+        let physical_ms = u64::from_be_bytes(bytes[0..8].try_into().map_err(|_| {
+            TimestampError::InsufficientBytes {
+                expected: 28,
+                actual: bytes.len(),
+            }
+        })?);
+        let logical = u32::from_be_bytes(bytes[8..12].try_into().map_err(|_| {
+            TimestampError::InsufficientBytes {
+                expected: 28,
+                actual: bytes.len(),
+            }
+        })?);
+        let actor_id = Uuid::from_bytes(bytes[12..28].try_into().map_err(|_| {
+            TimestampError::InsufficientBytes {
+                expected: 28,
+                actual: bytes.len(),
+            }
+        })?);
 
         Ok(Self {
             physical_ms,
@@ -181,10 +196,11 @@ pub enum TimestampError {
 
 /// Get current wall clock time in milliseconds since UNIX epoch.
 fn current_time_ms() -> u64 {
-    SystemTime::now()
+    let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system time before UNIX epoch")
-        .as_millis() as u64
+        .as_millis();
+    u64::try_from(millis).unwrap_or(u64::MAX)
 }
 
 #[cfg(test)]
@@ -226,7 +242,7 @@ mod tests {
     #[test]
     fn timestamp_serialization_roundtrip() {
         let ts = Timestamp {
-            physical_ms: 1704067200000,
+            physical_ms: 1_704_067_200_000,
             logical: 42,
             actor_id: Uuid::new_v4(),
         };

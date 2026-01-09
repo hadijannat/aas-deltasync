@@ -1,14 +1,14 @@
-//! BaSyx MQTT subscriber for event ingestion.
+//! `BaSyx` MQTT subscriber for event ingestion.
 
 use crate::events::{BasyxEvent, EventParseError};
 use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
 use std::time::Duration;
 use tokio::sync::mpsc;
 
-/// Configuration for the BaSyx subscriber.
+/// Configuration for the `BaSyx` subscriber.
 #[derive(Debug, Clone)]
 pub struct BasyxSubscriberConfig {
-    /// MQTT broker URL (e.g., "tcp://localhost:1883")
+    /// MQTT broker URL (e.g., <tcp://localhost:1883>)
     pub mqtt_broker: String,
     /// Client ID for MQTT connection
     pub client_id: String,
@@ -29,7 +29,7 @@ impl Default for BasyxSubscriberConfig {
     }
 }
 
-/// MQTT subscriber for BaSyx events.
+/// MQTT subscriber for `BaSyx` events.
 pub struct BasyxSubscriber {
     client: AsyncClient,
     eventloop: EventLoop,
@@ -37,14 +37,14 @@ pub struct BasyxSubscriber {
 }
 
 impl BasyxSubscriber {
-    /// Create a new BaSyx subscriber.
+    /// Create a new `BaSyx` subscriber.
     ///
     /// # Errors
     ///
     /// Returns error if MQTT connection fails.
     pub fn new(config: BasyxSubscriberConfig) -> Result<Self, SubscriberError> {
         // Parse broker URL
-        let (host, port) = parse_mqtt_url(&config.mqtt_broker)?;
+        let (host, port) = parse_mqtt_url(&config.mqtt_broker);
 
         let mut mqtt_options = MqttOptions::new(&config.client_id, host, port);
         mqtt_options.set_keep_alive(config.keep_alive);
@@ -96,16 +96,13 @@ impl BasyxSubscriber {
                         let event = BasyxEvent::parse(&topic, &payload);
                         match &event {
                             Ok(parsed) => {
-                                let (id_short_path, has_value) = parsed
-                                    .element
-                                    .as_ref()
-                                    .map(|element| {
+                                let (id_short_path, has_value) =
+                                    parsed.element.as_ref().map_or((None, false), |element| {
                                         (
                                             Some(element.id_short_path.as_str()),
                                             element.value.is_some(),
                                         )
-                                    })
-                                    .unwrap_or((None, false));
+                                    });
 
                                 tracing::debug!(
                                     repo_id = %parsed.repo_id,
@@ -152,7 +149,7 @@ impl BasyxSubscriber {
 }
 
 /// Parse MQTT URL into host and port.
-fn parse_mqtt_url(url: &str) -> Result<(String, u16), SubscriberError> {
+fn parse_mqtt_url(url: &str) -> (String, u16) {
     let url = url
         .strip_prefix("tcp://")
         .or_else(|| url.strip_prefix("mqtt://"))
@@ -160,10 +157,10 @@ fn parse_mqtt_url(url: &str) -> Result<(String, u16), SubscriberError> {
 
     let parts: Vec<&str> = url.split(':').collect();
 
-    let host = parts.first().unwrap_or(&"localhost").to_string();
+    let host = parts.first().copied().unwrap_or("localhost").to_string();
     let port = parts.get(1).and_then(|p| p.parse().ok()).unwrap_or(1883);
 
-    Ok((host, port))
+    (host, port)
 }
 
 /// Errors that can occur with the subscriber.
@@ -186,21 +183,21 @@ mod tests {
 
     #[test]
     fn parse_mqtt_url_tcp() {
-        let (host, port) = parse_mqtt_url("tcp://localhost:1883").unwrap();
+        let (host, port) = parse_mqtt_url("tcp://localhost:1883");
         assert_eq!(host, "localhost");
         assert_eq!(port, 1883);
     }
 
     #[test]
     fn parse_mqtt_url_default_port() {
-        let (host, port) = parse_mqtt_url("tcp://broker.example.com").unwrap();
+        let (host, port) = parse_mqtt_url("tcp://broker.example.com");
         assert_eq!(host, "broker.example.com");
         assert_eq!(port, 1883);
     }
 
     #[test]
     fn parse_mqtt_url_no_scheme() {
-        let (host, port) = parse_mqtt_url("localhost:1883").unwrap();
+        let (host, port) = parse_mqtt_url("localhost:1883");
         assert_eq!(host, "localhost");
         assert_eq!(port, 1883);
     }

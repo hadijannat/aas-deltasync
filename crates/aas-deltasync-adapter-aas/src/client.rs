@@ -11,7 +11,7 @@ use std::time::Duration;
 /// AAS HTTP client configuration.
 #[derive(Debug, Clone)]
 pub struct AasClientConfig {
-    /// Base URL of the AAS server (e.g., "http://localhost:8081")
+    /// Base URL of the AAS server (e.g., <http://localhost:8081>)
     pub base_url: String,
     /// Request timeout
     pub timeout: Duration,
@@ -61,7 +61,7 @@ impl AasClient {
         self.config
             .bearer_token
             .as_ref()
-            .map(|t| format!("Bearer {}", t))
+            .map(|t| format!("Bearer {t}"))
     }
 
     /// Get the $value view of a submodel.
