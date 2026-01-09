@@ -28,10 +28,17 @@ fn parse_mqtt_url(url: &str) -> (String, u16) {
     (host, port)
 }
 
-async fn spawn_eventloop(mut eventloop: EventLoop) {
+async fn spawn_eventloop_with_ready(mut eventloop: EventLoop, ready: oneshot::Sender<()>) {
+    let mut ready = Some(ready);
     loop {
-        if eventloop.poll().await.is_err() {
-            break;
+        match eventloop.poll().await {
+            Ok(Event::Incoming(Packet::ConnAck(_))) => {
+                if let Some(tx) = ready.take() {
+                    let _ = tx.send(());
+                }
+            }
+            Ok(_) => {}
+            Err(_) => break,
         }
     }
 }
@@ -56,17 +63,23 @@ async fn mqtt_delta_roundtrip() {
     let mut sub_opts = MqttOptions::new(format!("sub-{}", Uuid::new_v4()), host.clone(), port);
     sub_opts.set_keep_alive(Duration::from_secs(5));
     let (sub_client, mut sub_eventloop) = AsyncClient::new(sub_opts, 10);
-    sub_client
-        .subscribe(&topic, QoS::AtLeastOnce)
-        .await
-        .unwrap();
 
-    let (tx, rx) = oneshot::channel();
+    let (ready_tx, ready_rx) = oneshot::channel();
+    let (payload_tx, rx) = oneshot::channel();
     tokio::spawn(async move {
+        let mut ready_tx = Some(ready_tx);
+        let mut payload_tx = Some(payload_tx);
         loop {
             match sub_eventloop.poll().await {
+                Ok(Event::Incoming(Packet::ConnAck(_))) => {
+                    if let Some(tx) = ready_tx.take() {
+                        let _ = tx.send(());
+                    }
+                }
                 Ok(Event::Incoming(Packet::Publish(publish))) => {
-                    let _ = tx.send(publish.payload.to_vec());
+                    if let Some(tx) = payload_tx.take() {
+                        let _ = tx.send(publish.payload.to_vec());
+                    }
                     break;
                 }
                 Ok(_) => {}
@@ -75,12 +88,26 @@ async fn mqtt_delta_roundtrip() {
         }
     });
 
+    timeout(Duration::from_secs(5), ready_rx)
+        .await
+        .expect("timeout waiting for MQTT connack")
+        .expect("subscriber connack dropped");
+
+    sub_client
+        .subscribe(&topic, QoS::AtLeastOnce)
+        .await
+        .unwrap();
+
     let mut pub_opts = MqttOptions::new(format!("pub-{}", Uuid::new_v4()), host, port);
     pub_opts.set_keep_alive(Duration::from_secs(5));
     let (pub_client, pub_eventloop) = AsyncClient::new(pub_opts, 10);
-    tokio::spawn(spawn_eventloop(pub_eventloop));
+    let (pub_ready_tx, pub_ready_rx) = oneshot::channel();
+    tokio::spawn(spawn_eventloop_with_ready(pub_eventloop, pub_ready_tx));
 
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    timeout(Duration::from_secs(5), pub_ready_rx)
+        .await
+        .expect("timeout waiting for publisher connack")
+        .expect("publisher connack dropped");
 
     let mut clock = Hlc::new(Uuid::new_v4());
     let ts = clock.tick();

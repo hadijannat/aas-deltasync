@@ -70,17 +70,18 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: test
-    services:
-      mosquitto:
-        image: eclipse-mosquitto:2
-        ports:
-          - 1883:1883
     steps:
       - uses: actions/checkout@v4
       
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       
+      - name: Start Mosquitto broker
+        run: |
+          docker run -d --name mosquitto -p 1883:1883 \
+            -v "${{ github.workspace }}/examples/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf" \
+            eclipse-mosquitto:2
+
       - name: Run integration tests
         run: DELTASYNC_INTEGRATION=1 cargo test -p aas-deltasync-agent --test integration -- --test-threads=1
         continue-on-error: true  # Integration tests may need full stack
