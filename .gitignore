@@ -20,5 +20,8 @@ Thumbs.db
 # Logs
 *.log
 
+# Local agent instructions
+AGENTS.md
+
 # Artifacts
 *.aasx
