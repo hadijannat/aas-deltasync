@@ -59,6 +59,7 @@ dependencies = [
  "aas-deltasync-core",
  "aas-deltasync-proto",
  "anyhow",
+ "ciborium",
  "rumqttc",
  "rusqlite",
  "serde",

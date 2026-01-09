@@ -69,7 +69,7 @@ Your implementation must embody the AAS API rule:
 * Identifiers are base64url encoded in the API
 * `idShortPath` is URL encoded ([industrialdigitaltwin.io][1])
 
-Note: `specs/` is empty in this repo; use the external IDTA HTTP/REST spec as the normative reference.
+Note: `specs/` currently contains placeholders; use the external IDTA HTTP/REST spec as the normative reference.
 
 Also check the AAS FAQ because reviewers often trip over `Submodel Id` vs `idShort` usage:
 

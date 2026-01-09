@@ -8,7 +8,6 @@ pub struct SqliteStore {
     conn: Connection,
 }
 
-#[allow(dead_code)]
 impl SqliteStore {
     /// Open or create a `SQLite` database.
     ///
@@ -27,6 +26,7 @@ impl SqliteStore {
     /// # Errors
     ///
     /// Returns error if database cannot be created.
+    #[allow(dead_code)]
     pub fn in_memory() -> SqliteResult<Self> {
         let conn = Connection::open_in_memory()?;
         let store = Self { conn };
@@ -112,6 +112,7 @@ impl SqliteStore {
     /// # Errors
     ///
     /// Returns error if query fails.
+    #[allow(dead_code)]
     pub fn get_deltas_after(&self, doc_id: &str, after_ts: u64) -> SqliteResult<Vec<Vec<u8>>> {
         let mut stmt = self.conn.prepare(
             r"
@@ -133,6 +134,7 @@ impl SqliteStore {
     /// # Errors
     ///
     /// Returns error if insert fails.
+    #[allow(dead_code)]
     pub fn save_snapshot(
         &self,
         doc_id: &str,
@@ -162,6 +164,7 @@ impl SqliteStore {
     /// # Errors
     ///
     /// Returns error if query fails.
+    #[allow(dead_code)]
     pub fn get_snapshot(&self, doc_id: &str) -> SqliteResult<Option<(Vec<u8>, Vec<u8>)>> {
         let mut stmt = self.conn.prepare(
             r"
@@ -182,6 +185,7 @@ impl SqliteStore {
     /// # Errors
     ///
     /// Returns error if delete fails.
+    #[allow(dead_code)]
     pub fn compact_deltas_before(&self, doc_id: &str, before_ts: u64) -> SqliteResult<usize> {
         let deleted = self.conn.execute(
             r"
@@ -199,7 +203,6 @@ impl SqliteStore {
     /// # Errors
     ///
     /// Returns error if update fails.
-    #[allow(dead_code)]
     pub fn update_peer_progress(
         &self,
         peer_id: &str,
