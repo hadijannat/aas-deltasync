@@ -105,6 +105,7 @@ impl Agent {
         // Initialize replication
         let (replication, mut eventloop) = ReplicationManager::new(
             &self.config.replication.mqtt_broker,
+            self.config.replication.mqtt_ca_path.as_deref(),
             &format!("aas-deltasync-{}", self.clock.actor_id()),
             topic_scheme.clone(),
         )

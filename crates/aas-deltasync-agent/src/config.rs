@@ -39,6 +39,8 @@ pub struct AdapterConfig {
 
     /// MQTT broker URL (for `BaSyx`)
     pub mqtt_broker: Option<String>,
+    /// CA certificate path for MQTT TLS (PEM)
+    pub mqtt_ca_path: Option<PathBuf>,
 
     /// Bearer token for authentication
     pub bearer_token: Option<String>,
@@ -52,6 +54,8 @@ pub struct AdapterConfig {
 pub struct ReplicationConfig {
     /// MQTT broker URL for delta replication
     pub mqtt_broker: String,
+    /// CA certificate path for MQTT TLS (PEM)
+    pub mqtt_ca_path: Option<PathBuf>,
 
     /// Tenant identifier
     pub tenant: String,
@@ -92,11 +96,13 @@ impl Default for AgentConfig {
                 aas_repo_url: Some("http://localhost:8081".to_string()),
                 sm_repo_url: "http://localhost:8082".to_string(),
                 mqtt_broker: Some("tcp://localhost:1883".to_string()),
+                mqtt_ca_path: None,
                 bearer_token: None,
                 poll_interval: Duration::from_secs(5),
             },
             replication: ReplicationConfig {
                 mqtt_broker: "tcp://localhost:1883".to_string(),
+                mqtt_ca_path: None,
                 tenant: "default".to_string(),
                 enable_egress: false,
             },
@@ -119,6 +125,7 @@ impl AgentConfig {
     /// - `DELTASYNC_ADAPTER_TYPE`: "basyx" or "faaast"
     /// - `DELTASYNC_SM_REPO_URL`: Submodel repository URL
     /// - `DELTASYNC_MQTT_BROKER`: MQTT broker URL
+    /// - `DELTASYNC_MQTT_CA_PATH`: MQTT CA certificate path (PEM)
     /// - `DELTASYNC_TENANT`: Tenant identifier
     /// - `DELTASYNC_DB_PATH`: `SQLite` database path
     ///
@@ -147,6 +154,12 @@ impl AgentConfig {
         if let Ok(mqtt) = std::env::var("DELTASYNC_MQTT_BROKER") {
             config.adapter.mqtt_broker = Some(mqtt.clone());
             config.replication.mqtt_broker = mqtt;
+        }
+
+        if let Ok(ca_path) = std::env::var("DELTASYNC_MQTT_CA_PATH") {
+            let ca_path = PathBuf::from(ca_path);
+            config.adapter.mqtt_ca_path = Some(ca_path.clone());
+            config.replication.mqtt_ca_path = Some(ca_path);
         }
 
         if let Ok(tenant) = std::env::var("DELTASYNC_TENANT") {

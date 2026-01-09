@@ -128,6 +128,15 @@ docker compose up -d
 
 The demo creates data on **Site A** and shows it appearing on **Site B** automatically!
 
+### TLS Demo (MQTTS)
+
+Use the TLS-enabled broker and point agents at `mqtts://`:
+
+```bash
+./examples/tls/generate-certs.sh
+docker compose -f examples/tls/docker-compose.yml up -d
+```
+
 ---
 
 ## 📊 Conflict Resolution Made Simple
@@ -198,6 +207,7 @@ adapters:
     aas_repo_url: "http://basyx-aas-repo:8081"
     sm_repo_url: "http://basyx-sm-repo:8082"
     mqtt_broker: "tcp://mosquitto:1883"
+    mqtt_ca_path: "/certs/ca.crt"
 
 persistence:
   type: sqlite

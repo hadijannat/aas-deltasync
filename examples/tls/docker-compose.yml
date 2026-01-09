@@ -1,0 +1,145 @@
+version: "3.8"
+
+# AAS-ΔSync TLS Demo Topology
+# ============================
+# TLS-enabled MQTT broker with the standard demo stack.
+#
+# Usage:
+#   ./examples/tls/generate-certs.sh
+#   docker compose -f examples/tls/docker-compose.yml up -d
+
+services:
+  # ============================================================================
+  # MQTT Broker (TLS)
+  # ============================================================================
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./certs:/mosquitto/certs:ro
+    networks:
+      - deltasync-net
+
+  # ============================================================================
+  # Site A: BaSyx AAS Stack
+  # ============================================================================
+  basyx-aas-repo-a:
+    image: eclipsebasyx/aas-repository:2.0.0-milestone-03
+    container_name: basyx-aas-repo-a
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+    volumes:
+      - ../basyx/aas-repo-a.properties:/application/application.properties
+    networks:
+      - deltasync-net
+    depends_on:
+      - mosquitto
+
+  basyx-sm-repo-a:
+    image: eclipsebasyx/submodel-repository:2.0.0-milestone-03
+    container_name: basyx-sm-repo-a
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVER_PORT=8082
+    volumes:
+      - ../basyx/sm-repo-a.properties:/application/application.properties
+    networks:
+      - deltasync-net
+    depends_on:
+      - mosquitto
+
+  # ============================================================================
+  # Site B: BaSyx AAS Stack
+  # ============================================================================
+  basyx-aas-repo-b:
+    image: eclipsebasyx/aas-repository:2.0.0-milestone-03
+    container_name: basyx-aas-repo-b
+    ports:
+      - "8091:8091"
+    environment:
+      - SERVER_PORT=8091
+    volumes:
+      - ../basyx/aas-repo-b.properties:/application/application.properties
+    networks:
+      - deltasync-net
+    depends_on:
+      - mosquitto
+
+  basyx-sm-repo-b:
+    image: eclipsebasyx/submodel-repository:2.0.0-milestone-03
+    container_name: basyx-sm-repo-b
+    ports:
+      - "8092:8092"
+    environment:
+      - SERVER_PORT=8092
+    volumes:
+      - ../basyx/sm-repo-b.properties:/application/application.properties
+    networks:
+      - deltasync-net
+    depends_on:
+      - mosquitto
+
+  # ============================================================================
+  # AAS-ΔSync Agents (TLS)
+  # ============================================================================
+  agent-a:
+    build:
+      context: ../..
+      dockerfile: ../../Dockerfile
+    container_name: agent-a
+    environment:
+      - DELTASYNC_AGENT_ID=00000000-0000-0000-0000-00000000000a
+      - DELTASYNC_ADAPTER_TYPE=basyx
+      - DELTASYNC_SM_REPO_URL=http://basyx-sm-repo-a:8082
+      - DELTASYNC_AAS_REPO_URL=http://basyx-aas-repo-a:8081
+      - DELTASYNC_MQTT_BROKER=mqtts://mosquitto:8883
+      - DELTASYNC_MQTT_CA_PATH=/certs/ca.crt
+      - DELTASYNC_TENANT=demo
+      - DELTASYNC_DB_PATH=/data/agent-a.db
+      - DELTASYNC_SUBSCRIPTIONS='[{"aas_id":"urn:example:aas:asset1","submodel_id":"urn:example:sm:demo"}]'
+    volumes:
+      - agent-a-data:/data
+      - ./certs:/certs:ro
+    networks:
+      - deltasync-net
+    depends_on:
+      - basyx-sm-repo-a
+      - mosquitto
+
+  agent-b:
+    build:
+      context: ../..
+      dockerfile: ../../Dockerfile
+    container_name: agent-b
+    environment:
+      - DELTASYNC_AGENT_ID=00000000-0000-0000-0000-00000000000b
+      - DELTASYNC_ADAPTER_TYPE=basyx
+      - DELTASYNC_SM_REPO_URL=http://basyx-sm-repo-b:8092
+      - DELTASYNC_AAS_REPO_URL=http://basyx-aas-repo-b:8091
+      - DELTASYNC_MQTT_BROKER=mqtts://mosquitto:8883
+      - DELTASYNC_MQTT_CA_PATH=/certs/ca.crt
+      - DELTASYNC_TENANT=demo
+      - DELTASYNC_DB_PATH=/data/agent-b.db
+      - DELTASYNC_SUBSCRIPTIONS='[{"aas_id":"urn:example:aas:asset1","submodel_id":"urn:example:sm:demo"}]'
+    volumes:
+      - agent-b-data:/data
+      - ./certs:/certs:ro
+    networks:
+      - deltasync-net
+    depends_on:
+      - basyx-sm-repo-b
+      - mosquitto
+
+networks:
+  deltasync-net:
+    driver: bridge
+
+volumes:
+  agent-a-data:
+  agent-b-data:

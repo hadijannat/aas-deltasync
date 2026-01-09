@@ -1,7 +1,9 @@
 //! `BaSyx` MQTT subscriber for event ingestion.
 
 use crate::events::{BasyxEvent, EventParseError};
-use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
+use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS, Transport};
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use url::Url;
@@ -9,8 +11,10 @@ use url::Url;
 /// Configuration for the `BaSyx` subscriber.
 #[derive(Debug, Clone)]
 pub struct BasyxSubscriberConfig {
-    /// MQTT broker URL (e.g., <tcp://localhost:1883>)
+    /// MQTT broker URL (e.g., `tcp://localhost:1883`, `mqtts://broker:8883`)
     pub mqtt_broker: String,
+    /// Optional CA certificate path for MQTT TLS (PEM)
+    pub mqtt_ca_path: Option<PathBuf>,
     /// Client ID for MQTT connection
     pub client_id: String,
     /// Repository ID to subscribe to
@@ -23,6 +27,7 @@ impl Default for BasyxSubscriberConfig {
     fn default() -> Self {
         Self {
             mqtt_broker: "tcp://localhost:1883".to_string(),
+            mqtt_ca_path: None,
             client_id: "aas-deltasync-basyx".to_string(),
             repo_id: "sm-repo".to_string(),
             keep_alive: Duration::from_secs(30),
@@ -45,10 +50,15 @@ impl BasyxSubscriber {
     /// Returns error if MQTT connection fails.
     pub fn new(config: BasyxSubscriberConfig) -> Result<Self, SubscriberError> {
         // Parse broker URL
-        let (host, port) = parse_mqtt_url(&config.mqtt_broker)?;
+        let endpoint = parse_mqtt_url(&config.mqtt_broker)?;
 
-        let mut mqtt_options = MqttOptions::new(&config.client_id, host, port);
+        let mut mqtt_options = MqttOptions::new(&config.client_id, endpoint.host, endpoint.port);
         mqtt_options.set_keep_alive(config.keep_alive);
+        configure_tls(
+            &mut mqtt_options,
+            endpoint.tls,
+            config.mqtt_ca_path.as_deref(),
+        )?;
 
         let (client, eventloop) = AsyncClient::new(mqtt_options, 100);
 
@@ -149,27 +159,50 @@ impl BasyxSubscriber {
     }
 }
 
-/// Parse MQTT URL into host and port.
-fn parse_mqtt_url(input: &str) -> Result<(String, u16), SubscriberError> {
+#[derive(Clone, Copy, Debug)]
+struct SchemeDefaults {
+    port: u16,
+    tls: bool,
+}
+#[derive(Debug)]
+struct MqttEndpoint {
+    host: String,
+    port: u16,
+    tls: bool,
+}
+
+/// Parse MQTT URL into host, port, and TLS flag.
+fn parse_mqtt_url(input: &str) -> Result<MqttEndpoint, SubscriberError> {
     if input.contains("://") {
         let url =
             Url::parse(input).map_err(|e| SubscriberError::InvalidUrl(format!("{input}: {e}")))?;
 
-        match url.scheme() {
-            "tcp" | "mqtt" => {}
+        let defaults = match url.scheme() {
+            "tcp" | "mqtt" => SchemeDefaults {
+                port: 1883,
+                tls: false,
+            },
+            "ssl" | "mqtts" => SchemeDefaults {
+                port: 8883,
+                tls: true,
+            },
             scheme => {
                 return Err(SubscriberError::InvalidUrl(format!(
                     "{input}: unsupported scheme '{scheme}'"
                 )));
             }
-        }
+        };
 
         let host = url
             .host_str()
             .ok_or_else(|| SubscriberError::InvalidUrl(format!("{input}: missing host")))?;
-        let port = url.port().unwrap_or(1883);
+        let port = url.port().unwrap_or(defaults.port);
 
-        return Ok((host.to_string(), port));
+        return Ok(MqttEndpoint {
+            host: host.to_string(),
+            port,
+            tls: defaults.tls,
+        });
     }
 
     let mut parts = input.split(':');
@@ -189,7 +222,33 @@ fn parse_mqtt_url(input: &str) -> Result<(String, u16), SubscriberError> {
         )));
     }
 
-    Ok((host.to_string(), port))
+    Ok(MqttEndpoint {
+        host: host.to_string(),
+        port,
+        tls: false,
+    })
+}
+
+fn configure_tls(
+    mqtt_options: &mut MqttOptions,
+    use_tls: bool,
+    ca_path: Option<&Path>,
+) -> Result<(), SubscriberError> {
+    if !use_tls {
+        return Ok(());
+    }
+
+    let transport = if let Some(path) = ca_path {
+        let ca = fs::read(path).map_err(|err| {
+            SubscriberError::Tls(format!("failed to read CA file {}: {err}", path.display()))
+        })?;
+        Transport::tls(ca, None, None)
+    } else {
+        Transport::tls_with_default_config()
+    };
+
+    mqtt_options.set_transport(transport);
+    Ok(())
 }
 
 /// Errors that can occur with the subscriber.
@@ -198,6 +257,9 @@ pub enum SubscriberError {
     /// Invalid MQTT URL
     #[error("invalid MQTT URL: {0}")]
     InvalidUrl(String),
+    /// TLS configuration error
+    #[error("TLS configuration error: {0}")]
+    Tls(String),
     /// Subscription failed
     #[error("subscription error: {0}")]
     Subscribe(String),
@@ -212,22 +274,33 @@ mod tests {
 
     #[test]
     fn parse_mqtt_url_tcp() {
-        let (host, port) = parse_mqtt_url("tcp://localhost:1883").unwrap();
-        assert_eq!(host, "localhost");
-        assert_eq!(port, 1883);
+        let endpoint = parse_mqtt_url("tcp://localhost:1883").unwrap();
+        assert_eq!(endpoint.host, "localhost");
+        assert_eq!(endpoint.port, 1883);
+        assert!(!endpoint.tls);
     }
 
     #[test]
     fn parse_mqtt_url_default_port() {
-        let (host, port) = parse_mqtt_url("tcp://broker.example.com").unwrap();
-        assert_eq!(host, "broker.example.com");
-        assert_eq!(port, 1883);
+        let endpoint = parse_mqtt_url("tcp://broker.example.com").unwrap();
+        assert_eq!(endpoint.host, "broker.example.com");
+        assert_eq!(endpoint.port, 1883);
+        assert!(!endpoint.tls);
     }
 
     #[test]
     fn parse_mqtt_url_no_scheme() {
-        let (host, port) = parse_mqtt_url("localhost:1883").unwrap();
-        assert_eq!(host, "localhost");
-        assert_eq!(port, 1883);
+        let endpoint = parse_mqtt_url("localhost:1883").unwrap();
+        assert_eq!(endpoint.host, "localhost");
+        assert_eq!(endpoint.port, 1883);
+        assert!(!endpoint.tls);
+    }
+
+    #[test]
+    fn parse_mqtt_url_mqtts() {
+        let endpoint = parse_mqtt_url("mqtts://broker.example.com:8883").unwrap();
+        assert_eq!(endpoint.host, "broker.example.com");
+        assert_eq!(endpoint.port, 8883);
+        assert!(endpoint.tls);
     }
 }

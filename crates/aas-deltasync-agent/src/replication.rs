@@ -1,7 +1,9 @@
 //! Replication layer for delta dissemination.
 
 use aas_deltasync_proto::{DocDelta, TopicScheme};
-use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS};
+use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS, Transport};
+use std::fs;
+use std::path::Path;
 use std::time::Duration;
 use url::Url;
 
@@ -19,13 +21,15 @@ impl ReplicationManager {
     /// Returns error if MQTT connection fails.
     pub fn new(
         mqtt_broker: &str,
+        mqtt_ca_path: Option<&Path>,
         client_id: &str,
         topic_scheme: TopicScheme,
     ) -> Result<(Self, EventLoop), ReplicationError> {
-        let (host, port) = parse_mqtt_url(mqtt_broker)?;
+        let endpoint = parse_mqtt_url(mqtt_broker)?;
 
-        let mut mqtt_options = MqttOptions::new(client_id, host, port);
+        let mut mqtt_options = MqttOptions::new(client_id, endpoint.host, endpoint.port);
         mqtt_options.set_keep_alive(Duration::from_secs(30));
+        configure_tls(&mut mqtt_options, endpoint.tls, mqtt_ca_path)?;
 
         let (client, eventloop) = AsyncClient::new(mqtt_options, 100);
 
@@ -83,27 +87,51 @@ impl ReplicationManager {
     }
 }
 
-/// Parse MQTT URL into host and port.
-fn parse_mqtt_url(input: &str) -> Result<(String, u16), ReplicationError> {
+#[derive(Clone, Copy, Debug)]
+struct SchemeDefaults {
+    port: u16,
+    tls: bool,
+}
+
+#[derive(Debug)]
+struct MqttEndpoint {
+    host: String,
+    port: u16,
+    tls: bool,
+}
+
+/// Parse MQTT URL into host, port, and TLS flag.
+fn parse_mqtt_url(input: &str) -> Result<MqttEndpoint, ReplicationError> {
     if input.contains("://") {
         let url = Url::parse(input)
             .map_err(|e| ReplicationError::InvalidBrokerUrl(format!("{input}: {e}")))?;
 
-        match url.scheme() {
-            "tcp" | "mqtt" => {}
+        let defaults = match url.scheme() {
+            "tcp" | "mqtt" => SchemeDefaults {
+                port: 1883,
+                tls: false,
+            },
+            "ssl" | "mqtts" => SchemeDefaults {
+                port: 8883,
+                tls: true,
+            },
             scheme => {
                 return Err(ReplicationError::InvalidBrokerUrl(format!(
                     "{input}: unsupported scheme '{scheme}'"
                 )));
             }
-        }
+        };
 
         let host = url
             .host_str()
             .ok_or_else(|| ReplicationError::InvalidBrokerUrl(format!("{input}: missing host")))?;
-        let port = url.port().unwrap_or(1883);
+        let port = url.port().unwrap_or(defaults.port);
 
-        return Ok((host.to_string(), port));
+        return Ok(MqttEndpoint {
+            host: host.to_string(),
+            port,
+            tls: defaults.tls,
+        });
     }
 
     let mut parts = input.split(':');
@@ -123,7 +151,33 @@ fn parse_mqtt_url(input: &str) -> Result<(String, u16), ReplicationError> {
         )));
     }
 
-    Ok((host.to_string(), port))
+    Ok(MqttEndpoint {
+        host: host.to_string(),
+        port,
+        tls: false,
+    })
+}
+
+fn configure_tls(
+    mqtt_options: &mut MqttOptions,
+    use_tls: bool,
+    ca_path: Option<&Path>,
+) -> Result<(), ReplicationError> {
+    if !use_tls {
+        return Ok(());
+    }
+
+    let transport = if let Some(path) = ca_path {
+        let ca = fs::read(path).map_err(|err| {
+            ReplicationError::Tls(format!("failed to read CA file {}: {err}", path.display()))
+        })?;
+        Transport::tls(ca, None, None)
+    } else {
+        Transport::tls_with_default_config()
+    };
+
+    mqtt_options.set_transport(transport);
+    Ok(())
 }
 
 /// Errors for replication operations.
@@ -139,6 +193,9 @@ pub enum ReplicationError {
     #[error("publish error: {0}")]
     #[allow(dead_code)]
     Publish(String),
+    /// TLS configuration error
+    #[error("TLS configuration error: {0}")]
+    Tls(String),
     /// Serialization failed
     #[error("serialize error: {0}")]
     #[allow(dead_code)]
