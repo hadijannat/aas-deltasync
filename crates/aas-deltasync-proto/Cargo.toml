@@ -1,0 +1,27 @@
+[package]
+name = "aas-deltasync-proto"
+description = "Wire protocol and MQTT topics for AAS-ΔSync"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+aas-deltasync-core = { path = "../aas-deltasync-core" }
+prost.workspace = true
+prost-types.workspace = true
+serde.workspace = true
+ciborium.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[build-dependencies]
+prost-build = "0.12"
+
+[features]
+default = []
+codegen = []
+
+[lints]
+workspace = true

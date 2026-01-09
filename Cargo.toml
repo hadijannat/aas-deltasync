@@ -1,0 +1,70 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/aas-deltasync-core",
+    "crates/aas-deltasync-proto",
+    "crates/aas-deltasync-adapter-aas",
+    "crates/aas-deltasync-adapter-basyx",
+    "crates/aas-deltasync-adapter-faaast",
+    "crates/aas-deltasync-agent",
+    "crates/aas-deltasync-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/aeroshariati/aas-deltasync"
+rust-version = "1.75"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# MQTT client
+rumqttc = "0.24"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ciborium = "0.2"  # CBOR
+
+# Protobuf
+prost = "0.12"
+prost-types = "0.12"
+
+# CRDT primitives
+crdts = "7.3"
+
+# Time and UUIDs
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Persistence
+rusqlite = { version = "0.30", features = ["bundled"] }
+
+# Encoding
+base64 = "0.21"
+percent-encoding = "2.3"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Testing
+tokio-test = "0.4"
+tempfile = "3.9"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"

@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: "AAS-ΔSync: Offline-First Multi-Master Synchronization for Asset Administration Shell Digital Twins"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Shariati
+    given-names: Aero
+repository-code: "https://github.com/aeroshariati/aas-deltasync"
+license: Apache-2.0
+version: 0.1.0
+date-released: "2025-01-08"
+keywords:
+  - asset-administration-shell
+  - digital-twin
+  - crdt
+  - synchronization
+  - industry-4-0
+  - multi-master
+  - offline-first
+abstract: >
+  A vendor-neutral synchronization layer for Asset Administration Shell (AAS) 
+  digital twins using delta-CRDT anti-entropy replication. Addresses the gap 
+  where AAS specifications explicitly leave synchronization and caching to 
+  implementations, providing a reusable, standards-aligned solution for 
+  multi-site deployments with offline-first capabilities.

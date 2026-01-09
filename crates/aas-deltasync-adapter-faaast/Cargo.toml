@@ -1,0 +1,25 @@
+[package]
+name = "aas-deltasync-adapter-faaast"
+description = "FA³ST HTTPS polling adapter for AAS-ΔSync"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+aas-deltasync-core = { path = "../aas-deltasync-core" }
+aas-deltasync-adapter-aas = { path = "../aas-deltasync-adapter-aas" }
+reqwest.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio-test.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

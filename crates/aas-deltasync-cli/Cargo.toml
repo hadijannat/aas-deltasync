@@ -1,0 +1,22 @@
+[package]
+name = "aas-deltasync-cli"
+description = "CLI utilities for AAS-ΔSync"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "aas-deltasync"
+path = "src/main.rs"
+
+[dependencies]
+aas-deltasync-core = { path = "../aas-deltasync-core" }
+aas-deltasync-adapter-aas = { path = "../aas-deltasync-adapter-aas" }
+tokio.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+
+[lints]
+workspace = true
