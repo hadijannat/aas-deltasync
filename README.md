@@ -221,7 +221,7 @@ persistence:
 ```bibtex
 @software{aas_deltasync,
   title = {AAS-ΔSync: Offline-First Multi-Master Synchronization for Asset Administration Shell Digital Twins},
-  author = {Shariati, Aero},
+  author = {Jannatabadi, Hadi},
   year = {2025},
   url = {https://github.com/aeroshariati/aas-deltasync}
 }
